@@ -1,0 +1,192 @@
+<html>    
+  <head> 
+    <script type="text/javascript" src="jquery-1.6.1.min.js"></script>        
+    <script src="http://maps.google.com/maps/api/js?sensor=false" type="text/javascript"></script>
+    <script type="text/javascript" src="gmap3.min.js"></script> 
+    <style>
+      body{
+        text-align:left;
+      }
+      #map{
+        margin: 20px auto;
+        border: 1px dashed #C0C0C0;
+        width: 95%;
+        height: 500px;
+      }
+    </style>
+    
+    <script type="text/javascript">
+        
+      $(function(){
+        $('#map').gmap3({
+          action: 'init',
+          options:{
+            center:[1.3667, 103.8],
+            zoom: 12
+          },
+          callback: function(){
+           loopLoad();
+          }
+        });
+		
+		
+		
+      });
+	  
+	  function loopLoad()
+	  {
+		clearAllRequests();
+		if($('input[name=chkSubmittedRequests]').is(':checked'))
+		{
+			loadSubmittedRequests();
+		}
+		if($('input[name=chkCompletedRequests]').is(':checked'))
+		{
+			loadCompletedRequests();
+		}
+		if($('input[name=chkCanceledRequests]').is(':checked'))
+		{
+			loadCanceledRequests();
+		}
+		setTimeout(function() {
+                loopLoad();
+              }, 4000);
+	  }
+	  
+	  function clearMarkers(request_status)
+	  {
+		var clear = {action:'clear', name:'marker', tag:'marker'+request_status};
+		$('#map').gmap3(clear);
+	  }
+	  
+	  function clearAllRequests()
+	  {
+		clearMarkers(0);
+		clearMarkers(1);
+		clearMarkers(2);
+	  }
+	  
+	  function loadSubmittedRequests()
+	  {
+		loadMarkers(0);
+	  }
+	  
+	  function loadCompletedRequests()
+	  {
+		loadMarkers(1);
+	  }
+	  
+	  function loadCanceledRequests()
+	  {
+		loadMarkers(2);
+	  }
+      
+      function loadMarkers(request_status)
+	  {
+		clearMarkers(request_status);
+		
+		$.getJSON('list_request_json.php?status='+request_status, function(data) {
+		  $.each(data, function(key, root_val) {
+			$.each(root_val, function(key1, val1){
+				var lat, lng;
+				$.each(val1, function(key2, val2){
+					if(key2=="lat")
+					{
+						lat=val2;
+					}
+					else if(key2=="lng")
+					{
+						lng=val2;
+					}
+				});
+				
+				var marker_icon='images/submitted.png';
+				
+				if(request_status==2)
+				{
+					marker_icon='images/canceled.png';
+				}
+				else if(request_status==1)
+				{
+					marker_icon='images/completed.png';
+				}
+				
+				$('#map').gmap3({ 
+				  action: 'addMarker',
+				  latLng:[lat, lng],
+				  options:{
+					draggable: false,
+					icon:new google.maps.MarkerImage(marker_icon)
+				  },
+				  tag: 'marker'+request_status
+				});
+			});
+		  });
+		});
+      }   
+	  
+	  function dropMarkers()
+	  {
+		var map = $('#map').gmap3('get'),
+            sw = map.getBounds().getSouthWest(),
+            ne = map.getBounds().getNorthEast(),
+            i;
+        for (i = 0; i < 10; i++) {
+          setTimeout(function() {
+            var lat = Math.random() * (ne.lat() - sw.lat()) + sw.lat(),
+                lng = Math.random() * (ne.lng() - sw.lng()) + sw.lng();
+            $('#map').gmap3({ 
+              action: 'addMarker',
+              latLng:[lat, lng],
+              options:{
+                draggable: false,
+                animation: google.maps.Animation.DROP
+              },
+			  tag: 'marker',
+            });
+          }, i * 200);
+        }
+	  }
+      
+      function startMarkerDance(request_status) {
+        var i, markers = $("#map").gmap3({action:'get', name:'marker', tag:'marker'+request_status});
+        for (i in markers) {
+          (function(m, i){
+            setTimeout(function() {
+                m.setAnimation(google.maps.Animation.BOUNCE);
+              }, i * 200);
+          })(markers[i], i);
+        }
+      }
+	  
+	  function startDance() {
+        var i, markers = $("#map").gmap3({action:'get', name:'marker', all:true});
+        for (i in markers) {
+          (function(m, i){
+            setTimeout(function() {
+                m.setAnimation(google.maps.Animation.BOUNCE);
+              }, i * 200);
+          })(markers[i], i);
+        }
+      }
+      
+      function stopDance() {
+        var i, markers = $("#map").gmap3({action:'get', name:'marker', all:true});
+        for (i in markers) {
+          if (markers[i].getAnimation() != null) {
+            markers[i].setAnimation(null);
+          }
+        }
+      }
+
+    </script>
+  <body>
+    <form>
+	<input type="checkbox" name="chkSubmittedRequests" checked="checked" value="Submitted Requests">Submitted Requests</input>
+	<input type="checkbox" name="chkCanceledRequests" value="Canceled Requests">Cancelled Requests</input>
+	<input type="checkbox" name="chkCompletedRequests" value="Completed Requests">Completed Requests</input>
+	</form>
+    
+    <div id="map"></div> 
+  </body>
+</html>
